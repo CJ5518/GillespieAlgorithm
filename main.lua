@@ -31,8 +31,15 @@ stoichiometry = {
 state = {}
 function normalTick(dt)
 	local newState = {};
+	for i, v in pairs(state) do
+		newState[i] = v;
+	end
 	for i, v in pairs(propensity) do
-		newState[i] = state[i] + (v() * dt);
+		local number = v();
+		for i2, v2 in pairs(stoichiometry[i]) do
+			--print(i, i2, number, v2);
+			newState[i2] = newState[i2] + (number * dt * v2);
+		end
 	end
 	state = newState;
 	time = time + dt;
@@ -40,7 +47,10 @@ end
 
 function gillespieTick()
 	--Summing everything gives us a result of 0, so something is messed up majorly
-	local totalSum = propensity[2]() - propensity[3]();
+	local totalSum = 0;
+	for i, v in pairs(propensity) do
+		totalSum = totalSum + v();
+	end
 	local otherThing = math.log(1 / math.random());
 	local sojourn = otherThing / totalSum;
 	
@@ -51,7 +61,7 @@ function gillespieTick()
 end
 
 function printState()
-	print(susceptible, infected, recovered);
+	print(state[3], state[2], state[1]);
 end
 
 function logRun(step, runs)
