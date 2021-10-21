@@ -54,9 +54,19 @@ function gillespieTick()
 	local otherThing = math.log(1 / math.random());
 	local sojourn = otherThing / totalSum;
 	
-	--The j part
+	local thingToBeat = totalSum * math.random();
 
+	local index = 0;
+	while thingToBeat >= 0 do
+		index = index + 1;
+		--This call errors if things go south
+		thingToBeat = thingToBeat - propensity[index]();
+	end
 
+	for i, v in pairs(stoichiometry[index]) do
+		state[i] = state[i] + v;
+	end
+	time = time + sojourn;
 
 end
 
@@ -75,21 +85,25 @@ function logRun(step, runs)
 	end
 	for q = 1, runs do
 		logState()
-		normalTick(step);
+		--normalTick(step);
+		gillespieTick();
 	end
 
 	print("-------------SUS--------------");
 	for i, v in pairs(sus) do
 		print(v);
 	end
+	io.read()
 	print("-------------INFECTED--------------");
 	for i, v in pairs(infect) do
 		print(v);
 	end
+	io.read()
 	print("-------------RECOVERED--------------");
 	for i, v in pairs(recov) do
 		print(v);
 	end
+	io.read()
 	print("-------------DT--------------");
 	for i, v in pairs(dts) do
 		print(v);
