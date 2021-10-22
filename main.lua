@@ -45,6 +45,8 @@ function normalTick(dt)
 	time = time + dt;
 end
 
+
+--Doesn't do the propensity cylcing thingy
 function gillespieTick()
 	--Summing everything gives us a result of 0, so something is messed up majorly
 	local totalSum = 0;
@@ -67,6 +69,9 @@ function gillespieTick()
 		state[i] = state[i] + v;
 	end
 	time = time + sojourn;
+end
+
+function tauLeaping()
 
 end
 
