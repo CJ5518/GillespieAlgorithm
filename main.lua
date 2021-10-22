@@ -45,6 +45,12 @@ function normalTick(dt)
 	time = time + dt;
 end
 
+--https://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables
+function poissonNumber(lambda)
+	local L = math.exp(-lambda);
+	local k = 0;
+	local p = 1;
+end
 
 --Doesn't do the propensity cylcing thingy
 function gillespieTick()
