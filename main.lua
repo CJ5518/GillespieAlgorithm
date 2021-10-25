@@ -30,6 +30,7 @@ stoichiometry = {
 --https://github.com/wefatherley/monte-carlo
 state = {}
 function normalTick(dt)
+	print("dt", dt)
 	local newState = {};
 	for i, v in pairs(state) do
 		newState[i] = v;
@@ -68,6 +69,7 @@ function gillespieTick()
 	while thingToBeat >= 0 do
 		index = index + 1;
 		--This call errors if things go south
+		print(index);
 		thingToBeat = thingToBeat - propensity[index]();
 	end
 
@@ -85,7 +87,9 @@ function printState()
 	print(state[3], state[2], state[1]);
 end
 
-function logRun(step, runs)
+
+
+function logRun(runs, logFunc, tickFunc, ...)
 	local sus,infect, recov, dts = {},{},{},{};
 	restoreState();
 	local function logState()
@@ -96,30 +100,38 @@ function logRun(step, runs)
 	end
 	for q = 1, runs do
 		logState()
-		--normalTick(step);
-		gillespieTick();
+		tickFunc(...);
 	end
+	logFunc(sus,infect,recov,dts);
+end
 
+function logToConsole(sus,infect, recov, dts)
 	print("-------------SUS--------------");
 	for i, v in pairs(sus) do
 		print(v);
 	end
-	io.read()
 	print("-------------INFECTED--------------");
 	for i, v in pairs(infect) do
 		print(v);
 	end
-	io.read()
 	print("-------------RECOVERED--------------");
 	for i, v in pairs(recov) do
 		print(v);
 	end
-	io.read()
 	print("-------------DT--------------");
 	for i, v in pairs(dts) do
 		print(v);
 	end
+end
 
+function logToCSV(sus,infect, recov, dts)
+	local file = io.open("Output.csv", "w");
+	file:write("dt,Susceptible,Infected,Recovered\n");
+	for i, v in ipairs(dts) do
+		local str = string.format("%f,%f,%f,%f\n", dts[i], sus[i], infect[i], recov[i]);
+		file:write(str);
+	end
+	file:close();
 end
 
 restoreState();
