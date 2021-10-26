@@ -44,6 +44,8 @@ function normalTick(dt)
 	end
 	state = newState;
 	time = time + dt;
+
+	return true;
 end
 
 --https://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables
@@ -60,6 +62,8 @@ function gillespieTick()
 	for i, v in pairs(propensity) do
 		totalSum = totalSum + v();
 	end
+	--Nothing will happen
+	if totalSum == 0 then return false end;
 	local otherThing = math.log(1 / math.random());
 	local sojourn = otherThing / totalSum;
 	
@@ -68,8 +72,6 @@ function gillespieTick()
 	local index = 0;
 	while thingToBeat >= 0 do
 		index = index + 1;
-		--This call errors if things go south
-		print(index);
 		thingToBeat = thingToBeat - propensity[index]();
 	end
 
@@ -77,17 +79,18 @@ function gillespieTick()
 		state[i] = state[i] + v;
 	end
 	time = time + sojourn;
+	return true;
 end
 
+--Assume this does something
+function possionNumber(a, tau)
+	return 1;
+end
+
+--https://aip.scitation.org/doi/pdf/10.1063/1.1378322
 function tauLeaping()
 
 end
-
-function printState()
-	print(state[3], state[2], state[1]);
-end
-
-
 
 function logRun(runs, logFunc, tickFunc, ...)
 	local sus,infect, recov, dts = {},{},{},{};
@@ -100,7 +103,9 @@ function logRun(runs, logFunc, tickFunc, ...)
 	end
 	for q = 1, runs do
 		logState()
-		tickFunc(...);
+		if not tickFunc(...) then
+			break;
+		end
 	end
 	logFunc(sus,infect,recov,dts);
 end
@@ -135,3 +140,4 @@ function logToCSV(sus,infect, recov, dts)
 end
 
 restoreState();
+logRun(1000, logToCSV, gillespieTick)
