@@ -5,6 +5,9 @@ Examples:
 logRun(7, logToConsole, gillespieTick)
 ]]
 
+--TODO:
+--Better choose the value for tau
+
 math.randomseed(os.time());
 --Tis an old wives tale
 math.random();
@@ -31,7 +34,7 @@ stoichiometry = {
 state = {}
 
 function restoreState()
-	state = {20, 0, 480}
+	state = {200, 0, 2e6 - 200}
 	infectRate = .5;
 	recoveryRate = .1;
 	time = 0;
@@ -47,8 +50,9 @@ function cloneState()
 end
 
 --Basic dumb method with floating point people
-function normalTick(dt)
-	print("dt", dt)
+--args[1] is dt
+function normalTick(args)
+	local dt = args[1] or 1;
 	local newState = cloneState();
 	for i, v in pairs(propensity) do
 		local number = v();
@@ -112,18 +116,20 @@ function gillespieTick()
 end
 
 --https://aip.scitation.org/doi/pdf/10.1063/1.1378322
-function tauLeaping()
+--args[1]:number - should be a fixed time to jump by
+function tauLeaping(args)
 	--Select the value for tau
-	local tau = .5;
+	local tau = args[1] or 1;
 
 	local newState = cloneState();
 
 	local allWereZero = true;
 
 	for i, v in pairs(propensity) do
-		local reactionEvents = poissonNumber(v() * tau);
+		local propensityResult = v();
+		local reactionEvents = poissonNumber(propensityResult * tau);
 
-		if reactionEvents > 0 then allWereZero = false; end
+		if propensityResult > 0 then allWereZero = false; end
 
 		for i2, v2 in pairs(stoichiometry[i]) do
 			newState[i2] = newState[i2] + (reactionEvents * v2);
@@ -134,30 +140,72 @@ function tauLeaping()
 	return not allWereZero;
 end
 
-function logRun(runs, logFunc, tickFunc, ...)
+--args[1]:number - should be a fixed time to jump by
+function estimatedMidpointTauLeaping(args)
+	local tau = args[1] or 1;
+	local expectedStateChange = {0,0,0}
+
+	--Calculate the expected state
+	for i, v in pairs(propensity) do
+		local aj = v();
+		for i2, v2 in pairs(stoichiometry[i]) do
+			expectedStateChange[i2] = expectedStateChange[i2] + (aj * v2);
+		end
+	end
+
+	local midpointState = {0,0,0};
+	for i, v in pairs(expectedStateChange) do
+		midpointState[i] = state[i] + (v / 2);
+	end
+
+	newState = cloneState();
+	state = midpointState;
+
+	local allWereZero = true;
+
+	--Calculate the actual state
+	for i, v in pairs(propensity) do
+		local propensityResult = v();
+		local reactionEvents = poissonNumber(propensityResult * tau);
+
+		if propensityResult > 0 then allWereZero = false; end
+
+		for i2, v2 in pairs(stoichiometry[i]) do
+			newState[i2] = newState[i2] + (reactionEvents * v2);
+		end
+	end
+	state = newState;
+	time = time + tau;
+	return not allWereZero;
+end
+
+function logRun(runs, logFunc, logFuncArgs, tickFunc, tickFuncArgs)
 	local sus,infect, recov, dts = {},{},{},{};
 	restoreState();
+	--Log the state into the tables
 	local function logState()
 		sus[#sus+1] = state[3];
 		infect[#infect+1] = state[1];
 		recov[#recov+1] = state[2];
 		dts[#dts+1] = time;
 	end
+	--Briefly check if things have gone negative
 	local function isStateGood()
 		for i,v in pairs(state) do
-			if v < 0 then return false; end
+			--Set the negative things to zero
+			if v < 0 then state[i] = 0 end
 		end
 		return true;
 	end
 	for q = 1, runs do
 		logState()
-		if not tickFunc(...) then
+		if not tickFunc(tickFuncArgs) then
 			break;
 		end
 		if not isStateGood() then break end
 	end
 	logState();
-	logFunc(sus,infect,recov,dts);
+	logFunc(sus,infect,recov,dts, logFuncArgs);
 end
 
 function logToConsole(sus,infect, recov, dts)
@@ -179,8 +227,9 @@ function logToConsole(sus,infect, recov, dts)
 	end
 end
 
-function logToCSV(sus,infect, recov, dts)
-	local file = io.open("Output.csv", "w");
+--args[1] should be the filename of the output file
+function logToCSV(sus,infect, recov, dts, args)
+	local file = io.open(args[1] or "Output.csv", "w");
 	file:write("dt,Susceptible,Infected,Recovered\n");
 	for i, v in ipairs(dts) do
 		local str = string.format("%f,%f,%f,%f\n", dts[i], sus[i], infect[i], recov[i]);
