@@ -2,7 +2,9 @@ require("gamma")
 
 --[[
 Examples:
-logRun(7, logToConsole, gillespieTick)
+logRun(7, logToConsole, {}, gillespieTick, {})
+logRun(500, logToCSV, {}, tauLeaping, {.1, nil})
+logRun(500, logToCSV, {}, tauLeaping, {nil, .1})
 ]]
 
 --TODO:
@@ -24,7 +26,7 @@ propensity = {
 		return recoveryRate * state[1];
 	end,
 }
-
+--stoichiometry[reaction][state]
 stoichiometry = {
 	{1, 0, -1}, --sus to infected
 	{-1, 1, 0} -- infected to recoved
@@ -116,19 +118,61 @@ function gillespieTick()
 end
 
 --https://aip.scitation.org/doi/pdf/10.1063/1.2159468
-function chooseTauFancy()
-	local function hatFunc(stateIdx, isSigma)
+function chooseTauFancy(epsilon)
+	epsilon = epsilon or .1;
+	--Returns the highest order reaction the given state is a part of
+	--I think I'm calculating this right?
+	local function HOR(stateIdx)
+		--0 order reaction lmao
+		local order = 0;
+
 		for i, v in pairs(stoichiometry) do
-			
+			if v[stateIdx] ~= 0 then order = order + 1; end
+		end
+		
+		return order;
+	end
+	--The two hat funcs, encapsulated into one
+	--Set sigma to true to use the sigma function
+	local function hatFunc(stateIdx, isSigma)
+		local sum = 0;
+		for i, v in pairs(propensity) do
+			local stoich = stoichiometry[i][stateIdx];
+			--Pretty much just absolute value in our case, but the paper says square it
+			if isSigma then stoich = stoich * stoich end
+			sum = sum + (stoich * v());
+		end
+		return sum;
+	end
+
+	--Pray that we understood the HOR
+	local function gFunc(reactionIdx)
+		local HORRes = HOR(reactionIdx);
+		if HORRes == 1 then 
+			return 1;
+		elseif HORRes == 2 then
+			return 2;
 		end
 	end
+
+	local tau = 1000000;
+
+	for i, v in pairs(state) do
+		tau = math.min(tau,
+			math.min(
+				math.max((epsilon * v) / gFunc(i), 1) / math.abs(hatFunc(i, false)), math.pow(math.max((epsilon * v) / gFunc(i), 1),2) / hatFunc(i, true)
+			)
+		)
+	end
+	return tau;
 end
 
 --https://aip.scitation.org/doi/pdf/10.1063/1.1378322
---args[1]:number - should be a fixed time to jump by
+--args[1]:number - should be a fixed time to jump by, or nil if we should pick it ourself
+--args[2]:number - (0,1) epsilon, the error in our tau leaping, if we pick it
 function tauLeaping(args)
 	--Select the value for tau
-	local tau = args[1] or 1;
+	local tau = args[1] or chooseTauFancy(args[2]);
 
 	local newState = cloneState();
 
@@ -149,9 +193,10 @@ function tauLeaping(args)
 	return not allWereZero;
 end
 
---args[1]:number - should be a fixed time to jump by
+--args[1]:number - should be a fixed time to jump by, or nil if we should pick it ourself
+--args[2]:number - (0,1) epsilon, the error in our tau leaping, if we pick it
 function estimatedMidpointTauLeaping(args)
-	local tau = args[1] or 1;
+	local tau = args[1] or chooseTauFancy(args[2]);
 	local expectedStateChange = {0,0,0}
 
 	--Calculate the expected state
