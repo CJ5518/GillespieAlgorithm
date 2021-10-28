@@ -115,6 +115,15 @@ function gillespieTick()
 	return true;
 end
 
+--https://aip.scitation.org/doi/pdf/10.1063/1.2159468
+function chooseTauFancy()
+	local function hatFunc(stateIdx, isSigma)
+		for i, v in pairs(stoichiometry) do
+			
+		end
+	end
+end
+
 --https://aip.scitation.org/doi/pdf/10.1063/1.1378322
 --args[1]:number - should be a fixed time to jump by
 function tauLeaping(args)
