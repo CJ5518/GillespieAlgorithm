@@ -99,7 +99,9 @@ function gillespieTick()
 	if totalSum == 0 then return false end;
 
 	--Whens the reaction?
-	local otherThing = math.log(1 / math.random());
+	local rand1 = 0;
+	while rand1 == 0 do rand1 = math.random() end
+	local otherThing = math.log(1 / rand1);
 	local sojourn = otherThing / totalSum;
 	
 	--Which reaction?
@@ -290,6 +292,20 @@ function logToCSV(sus,infect, recov, dts, args)
 		file:write(str);
 	end
 	file:close();
+end
+
+function trimCSV(inFilename, outFilename, step)
+	local inFile = io.open(inFilename, "r");
+	local outFile = io.open(outFilename, "w");
+	local idx = step;
+	for line in inFile:lines() do
+		if idx % step == 0 then
+			outFile:write(line .. "\n");
+		end
+		idx = idx + 1;
+	end
+	inFile:close();
+	outFile:close();
 end
 
 restoreState();
