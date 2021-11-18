@@ -68,6 +68,13 @@ function normalTick(args)
 	return true;
 end
 
+--https://rosettacode.org/wiki/Statistics/Normal_distribution#Lua
+--Returns a normal random variable with mean and variance^2
+function gaussian (mean, variance)
+	return math.sqrt(-2 * variance * math.log(math.random())) *
+			math.cos(2 * math.pi * math.random()) + mean
+end
+
 --The probability that k is the result given lambda
 function poissonProbability(k, lambda)
 	return math.exp((k * math.log(lambda)) - lambda - log_gamma(k+1));
@@ -76,6 +83,17 @@ end
 --Pick your poisson
 --O(n) time, but I didn't feel like implementing a faster method
 function poissonNumber(lambda)
+	--[[
+Since the
+Poisson random variable P(a,t) will, when at>=1, be well
+approximated by a normal random variable with the same
+mean and variance @see Eq. ~A5!#, then the number of firings
+of channel Rj in @t,t1t) can be approximated by [a normal random variable with same mean and variance]
+Which is what we do in here
+	]]
+	if lambda >= 2 then
+		return math.floor(gaussian(lambda, lambda) + 0.5);
+	end
 	local L = math.exp(-lambda);
 	local p = 1;
 	local k = 0;
@@ -203,7 +221,7 @@ function estimatedMidpointTauLeaping(args)
 
 	--Calculate the expected state
 	for i, v in pairs(propensity) do
-		local aj = v();
+		local aj = v() * tau;
 		for i2, v2 in pairs(stoichiometry[i]) do
 			expectedStateChange[i2] = expectedStateChange[i2] + (aj * v2);
 		end
